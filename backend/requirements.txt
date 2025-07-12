@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+transformers
+torch
+groq
+python-dotenv
+google-genai
