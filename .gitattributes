@@ -1,3 +1,0 @@
-backend/model/saved_models/*/pytorch_model.bin filter=lfs diff=lfs merge=lfs -text
-backend/model/saved_models/*/*.bin filter=lfs diff=lfs merge=lfs -text
-backend/model/saved_models/*/*.safetensors filter=lfs diff=lfs merge=lfs -text
