@@ -1,30 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8" />
+  <title>Cyberlaw Detector</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; padding: 12px; width: 300px; }
-    textarea { width: 100%; height: 80px; border-radius: 8px; }
-    button { margin-top: 10px; width: 100%; padding: 8px; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer;}
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 12px;
+      width: 300px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      border-radius: 8px;
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      margin-top: 10px;
+      width: 100%;
+      padding: 8px;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #result {
+      margin-top: 12px;
+      font-weight: 600;
+    }
+
+    .rephrased-block {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #444;
+      background: #f9f9f9;
+      padding: 8px;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
   <h2>Cyberlaw Detector</h2>
-  <textarea id="input" placeholder="Paste suspicious text"></textarea>
+  <textarea id="input" placeholder="Paste text to analyze..."></textarea>
   <button id="analyze">Analyze</button>
-  <div id="result" style="margin-top:10px;"></div>
+  <div id="result"></div>
 
-  <script>
-    document.getElementById('analyze').addEventListener('click', () => {
-      const input = document.getElementById('input').value.toLowerCase();
-      const flaggedTerms = ["scam","fraud","blackmail","phish","harass","threat","hate","abuse"];
-      const found = flaggedTerms.filter(term => input.includes(term));
-      const resDiv = document.getElementById('result');
-      if(found.length) {
-        resDiv.innerHTML = `⚠️ Detected: <span style="color:#d32f2f;">${found.join(', ')}</span>`;
-      } else {
-        resDiv.innerHTML = `<span style="color:#2e7d32;">✅ No suspicious content found.</span>`;
-      }
-    });
-  </script>
+  <!-- ✅ External JS (not inline) -->
+  <script src="popup.js"></script>
 </body>
 </html>

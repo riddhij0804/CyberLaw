@@ -21,9 +21,8 @@ If the given content is in Hinglish, rephrase it in Hinglish only.
 If in English, rephrase in English only. 
 If the content is in Devanagari script, rephrase it in Devanagari script only. 
 Do not change the meaning of the content.
-
-Give exactly {count} rephrased options for:
-"{original_text}"
+Give exactly {count} rephrased options for:"{original_text}"
+Dont write the line like here is the polite version and all direct give the response.
 """
 
         contents = [

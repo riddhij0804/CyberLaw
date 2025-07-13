@@ -1,56 +1,90 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding, Trainer
+from scipy.special import softmax
+from datasets import Dataset
 import torch
+import numpy as np
 from rephraser.gemini import gemini_rephrase
 from rephraser.groq import groq_rephrase
 from dotenv import load_dotenv
 import os
 from pathlib import Path
 
-# Load environment variables
+# Load env variables
 load_dotenv()
 
-# Initialize FastAPI app
+# Initialize app
 app = FastAPI()
 
-# Enable CORS (so frontend can call the backend)
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to specific frontend origin in prod
+    allow_origins=["*"],  # change in prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Model path
-model_path = Path(__file__).parent / "model" / "my_model" / "my_model_new"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Load tokenizer and model
-tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
+# Model directories - adjust paths as needed
+model_paths = {
+    "model1": Path(__file__).parent / "model" / "saved_models" / "indicbert",
+    "model2": Path(__file__).parent / "model" / "saved_models" / "minilm",  # example second model path
+}
 
-# Label mapping
+# Load both tokenizers and models once on startup
+tokenizers = {}
+models = {}
+
+for key, path in model_paths.items():
+    tokenizers[key] = AutoTokenizer.from_pretrained(path, local_files_only=True)
+    models[key] = AutoModelForSequenceClassification.from_pretrained(path, local_files_only=True).to(device)
+
+# Use label_map from one model, assuming both have same labels
 label_map = {0: "NAG", 1: "CAG", 2: "OAG"}
 
-# Input schema
 class TextInput(BaseModel):
     text: str
     more: bool = False
 
-# POST endpoint (CHANGED from /check to /analyze)
+def tokenize_text(text: str, tokenizer):
+    dataset = Dataset.from_dict({"text": [text]})
+    return dataset.map(lambda x: tokenizer(x["text"], truncation=True, padding="max_length", max_length=512), batched=True)
+
 @app.post("/analyze")
 def analyze_text(data: TextInput):
-    inputs = tokenizer(data.text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-    prediction = torch.argmax(outputs.logits, dim=1).item()
-    label = label_map[prediction]
+    all_probs = []
 
+    # Run inference on both models and collect probs
+    for key in model_paths:
+        tokenizer = tokenizers[key]
+        model = models[key]
+
+        tokenized_input = tokenize_text(data.text, tokenizer)
+
+        trainer = Trainer(
+            model=model,
+            tokenizer=tokenizer,
+            data_collator=DataCollatorWithPadding(tokenizer),
+        )
+
+        outputs = trainer.predict(tokenized_input)
+        probs = softmax(outputs.predictions, axis=1)
+        all_probs.append(probs)
+
+    # Average probabilities (soft voting ensemble)
+    avg_probs = np.mean(all_probs, axis=0)
+    pred_id = int(np.argmax(avg_probs))
+    label = label_map[pred_id]
+
+    # If classified as CAG or OAG, call rephrasers
     if label in ["CAG", "OAG"]:
-        groq_versions = groq_rephrase(data.text, count=2 if data.more else 1)
-        gemini_versions = gemini_rephrase(data.text, count=2 if data.more else 1)
+        count = 2 if data.more else 1
+        groq_versions = groq_rephrase(data.text, count=count)
+        gemini_versions = gemini_rephrase(data.text, count=count)
         return {
             "label": label,
             "groq": groq_versions,
@@ -58,3 +92,5 @@ def analyze_text(data: TextInput):
         }
 
     return {"label": label, "groq": [], "gemini": []}
+
+
