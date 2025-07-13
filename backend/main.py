@@ -62,7 +62,7 @@ for key, path in model_paths.items():
         print(f"❌ Failed to load {key}: {e}")
 
 # Use label_map from one model, assuming both have same labels
-label_map = {0: "NAG", 1: "CAG", 2: "OAG"}
+label_map = {1: "NAG", 0: "CAG", 2: "OAG"}
 
 class TextInput(BaseModel):
     text: str

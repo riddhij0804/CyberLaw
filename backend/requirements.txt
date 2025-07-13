@@ -5,3 +5,12 @@ torch
 groq
 python-dotenv
 google-genai
+numpy
+scipy
+tokenizers
+protobuf
+accelerate>=0.26.0
+datasets
+pydantic
+requests
+
