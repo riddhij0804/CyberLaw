@@ -1,7 +1,7 @@
 // --- Create floating button ---
 const floatingBtn = document.createElement("button");
 floatingBtn.innerHTML = `
-  <img src="${chrome.runtime.getURL('icons/icon16.png')}" style="width: 16px; height: 16px; margin-right: 8px;">
+  <img src="${chrome.runtime.getURL('icons/logo.png')}" style="width: 16px; height: 16px; margin-right: 8px;">
   CyberLaw Checker
 `;
 Object.assign(floatingBtn.style, {
@@ -23,7 +23,7 @@ Object.assign(floatingBtn.style, {
   display: "flex",
   alignItems: "center",
 });
-
+console.log("Icon URL:", chrome.runtime.getURL('icons/icon16.png'));
 floatingBtn.addEventListener("mouseenter", () => {
   floatingBtn.style.transform = "translateY(-2px)";
   floatingBtn.style.boxShadow = "0 6px 20px rgba(102, 126, 234, 0.4)";
@@ -62,7 +62,7 @@ Object.assign(initialWarning.style, {
 });
 initialWarning.innerHTML = `
   <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 20px 20px 0 0; width: 100%; box-sizing: border-box;">
-    <img src="${chrome.runtime.getURL('icons/icon48.png')}" style="width: 48px; height: 48px; margin-bottom: 15px;">
+    <img src="${chrome.runtime.getURL('icons/logo.png')}" style="width: 48px; height: 48px; margin-bottom: 15px;">
     <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">⚖️ CyberLaw Alert</div>
     <div style="font-size: 12px; opacity: 0.9;">Content analysis detected issues</div>
   </div>
@@ -106,7 +106,7 @@ detailOverlay.innerHTML = `
   <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; position: relative;">
     <div style="display: flex; align-items: center; justify-content: space-between;">
       <div style="display: flex; align-items: center;">
-        <img src="${chrome.runtime.getURL('icons/icon48.png')}" style="width: 32px; height: 32px; margin-right: 15px;">
+        <img src="${chrome.runtime.getURL('icons/logo.png')}" style="width: 32px; height: 32px; margin-right: 15px;">
         <div>
           <div style="font-size: 20px; font-weight: bold;">⚖️ Content Analysis</div>
           <div id="detailClassification" style="font-size: 14px; opacity: 0.9;"></div>
@@ -207,7 +207,7 @@ let currentPrediction = "";
 let currentData = null;
 let warningDismissedFor = new WeakSet();
 
-// Website approval system
+// Website approval system - persistent storage
 const approvedSites = new Set([
   'twitter.com', 'x.com', 'facebook.com', 'instagram.com', 'linkedin.com',
   'reddit.com', 'youtube.com', 'gmail.com', 'outlook.com', 'discord.com',
@@ -216,6 +216,32 @@ const approvedSites = new Set([
 
 let sitePermissionAsked = false;
 let siteApproved = false;
+
+// Load site permissions from storage
+async function loadSitePermissions() {
+  try {
+    const result = await chrome.storage.local.get(['approvedSites']);
+    if (result.approvedSites) {
+      result.approvedSites.forEach(site => approvedSites.add(site));
+    }
+  } catch (error) {
+    console.log("Could not load site permissions:", error);
+  }
+}
+
+// Save site permission to storage
+async function saveSitePermission(hostname) {
+  try {
+    const result = await chrome.storage.local.get(['approvedSites']);
+    const sites = result.approvedSites || [];
+    if (!sites.includes(hostname)) {
+      sites.push(hostname);
+      await chrome.storage.local.set({ approvedSites: sites });
+    }
+  } catch (error) {
+    console.log("Could not save site permission:", error);
+  }
+}
 
 // Create site permission overlay
 const permissionOverlay = document.createElement("div");
@@ -237,7 +263,7 @@ Object.assign(permissionOverlay.style, {
 permissionOverlay.innerHTML = `
   <div style="background: white; border-radius: 20px; padding: 0; max-width: 450px; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; overflow: hidden;">
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px;">
-      <img src="${chrome.runtime.getURL('icons/icon48.png')}" style="width: 48px; height: 48px; margin-bottom: 15px;">
+      <img src="${chrome.runtime.getURL('icons/logo.png')}" style="width: 48px; height: 48px; margin-bottom: 15px;">
       <div style="font-size: 22px; font-weight: bold; margin-bottom: 10px;">🛡️ CyberLaw Content Monitor</div>
       <div style="opacity: 0.9; font-size: 14px;">Detect aggressive content & legal implications</div>
     </div>
@@ -271,9 +297,10 @@ document.body.appendChild(permissionOverlay);
 const allowBtn = permissionOverlay.querySelector("#allowPermission");
 const denyBtn = permissionOverlay.querySelector("#denyPermission");
 
-allowBtn.addEventListener("click", () => {
+allowBtn.addEventListener("click", async () => {
   const hostname = window.location.hostname.replace('www.', '');
   approvedSites.add(hostname);
+  await saveSitePermission(hostname);
   siteApproved = true;
   permissionOverlay.style.display = "none";
   monitorInputs(); // Start monitoring after approval
@@ -291,6 +318,7 @@ function isApprovedSite() {
     return true;
   }
   
+  // Only ask for permission once per browser session
   if (!sitePermissionAsked) {
     sitePermissionAsked = true;
     permissionOverlay.style.display = "flex";
@@ -409,9 +437,9 @@ function displaySuggestions(data) {
             <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px;">${suggestionCount++}</div>
             <div style="font-size: 14px; font-weight: bold; color: #2e7d32;">Alternative Suggestion</div>
           </div>
-          <button onclick="copySuggestion('${suggestion.replace(/'/g, "\\'")}', ${index})" style="background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-            📋 Copy
-          </button>
+<button class="copy-suggestion-btn" data-text="${suggestion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}" data-index="${index}" style="background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+  📋 Copy
+</button>
         </div>
         <div style="color: #333; line-height: 1.6; font-style: italic; background: #f5f5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
           "${suggestion}"
@@ -430,6 +458,41 @@ function displaySuggestions(data) {
   }
   
   suggestionsContent.innerHTML = html;
+
+  // Add event listeners for copy buttons
+const copyButtons = suggestionsContent.querySelectorAll('.copy-suggestion-btn');
+copyButtons.forEach(btn => {
+  btn.addEventListener('click', async function() {
+    const text = this.dataset.text;
+    const originalText = this.innerHTML;
+    const originalBackground = this.style.background;
+    
+    try {
+      // Try the modern approach
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
+    // Update button appearance
+    this.innerHTML = '✅ Copied!';
+    this.style.background = 'linear-gradient(135deg, #4caf50, #45a049)';
+    this.style.transform = 'scale(0.95)';
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      this.innerHTML = originalText;
+      this.style.background = originalBackground;
+      this.style.transform = 'scale(1)';
+    }, 2000);
+  });
+});
 }
 
 // Global functions for suggestion actions
@@ -528,62 +591,32 @@ function attachListener(el) {
     }
     
     const val = el.value || el.innerText || "";
-    if (val.trim().length < 3) return; // Check even shorter text for immediate detection
     
-    // Immediate check for aggressive keywords without debounce
-    const immediateCheck = checkImmediateKeywords(val);
-    if (immediateCheck) {
-      showInitialWarning(el, immediateCheck, val);
-      return;
-    }
+    // Only check complete sentences with proper word boundaries
+    if (val.trim().length < 10) return; // Minimum 10 characters for meaningful content
+    
+    // Check if we have complete words (not just partial typing)
+    const words = val.trim().split(/\s+/);
+    if (words.length < 3) return; // Need at least 3 words for context
     
     // Debounce API calls for full ML analysis
     clearTimeout(timeoutId);
     timeoutId = setTimeout(async () => {
       const prediction = await checkWithModel(val);
-      if (prediction === "OAG" || prediction === "CAG") {
+      
+      // Only show warnings for OAG (offensive), or CAG if it's a complete sentence
+      if (prediction === "OAG") {
+        showInitialWarning(el, prediction, val);
+      } else if (prediction === "CAG" && val.trim().length > 10) {
+        // For CAG, only show if it's a complete sentence (has period and substantial length)
         showInitialWarning(el, prediction, val);
       } else {
         hideAllOverlays();
       }
-    }, 200); // Further reduced for faster detection
+    }, 600); // Increased delay to avoid partial word detection
   });
   
   el.dataset.cyberlawAttached = "true";
-}
-
-// Immediate keyword checking for instant detection
-function checkImmediateKeywords(text) {
-  const lowerText = text.toLowerCase();
-  
-  // Common aggressive keywords for immediate detection
-  const offensiveKeywords = [
-    'kill', 'murder', 'rape', 'hate', 'stupid', 'idiot', 'loser', 'pathetic',
-    'disgusting', 'worthless', 'useless', 'trash', 'garbage', 'scum', 'die',
-    'death', 'threat', 'violence', 'hurt', 'harm', 'attack', 'destroy',
-    'damn', 'hell', 'shit', 'fuck', 'bitch', 'asshole', 'bastard'
-  ];
-  
-  const cyberAggressiveKeywords = [
-    'troll', 'spam', 'fake', 'liar', 'cheat', 'fraud', 'scam', 'hack',
-    'noob', 'retard', 'moron', 'dumb', 'shut up', 'get lost', 'go away'
-  ];
-  
-  // Check for offensive keywords (OAG)
-  for (const keyword of offensiveKeywords) {
-    if (lowerText.includes(keyword)) {
-      return "OAG";
-    }
-  }
-  
-  // Check for cyber aggressive keywords (CAG)
-  for (const keyword of cyberAggressiveKeywords) {
-    if (lowerText.includes(keyword)) {
-      return "CAG";
-    }
-  }
-  
-  return null;
 }
 
 function monitorInputs() {
@@ -606,29 +639,44 @@ dismissBtn.addEventListener("click", () => {
 closeDetailBtn.addEventListener("click", hideAllOverlays);
 
 // --- Manual check logic ---
+let manualTimeoutId;
+
 manualInput.addEventListener("input", async () => {
   const val = manualInput.value;
-  if (val.trim().length < 3) {
+  
+  // Clear previous timeout to prevent multiple API calls
+  clearTimeout(manualTimeoutId);
+  
+  if (val.trim().length < 10) {
     manualWarning.style.display = "none";
     return;
   }
   
-  // Immediate check for aggressive keywords
-  const immediateCheck = checkImmediateKeywords(val);
-  if (immediateCheck) {
-    displayManualWarning(immediateCheck);
+  // Check if we have complete words (not just partial typing)
+  const words = val.trim().split(/\s+/);
+  if (words.length < 3) {
+    manualWarning.style.display = "none";
     return;
   }
   
-  // Full ML analysis with slight delay
-  setTimeout(async () => {
-    const prediction = await checkWithModel(val);
-    if (prediction === "OAG" || prediction === "CAG") {
-      displayManualWarning(prediction);
-    } else {
+  // Debounced ML analysis with proper timeout management
+  manualTimeoutId = setTimeout(async () => {
+    try {
+      const prediction = await checkWithModel(val);
+      
+      // Only show warnings for OAG, or CAG if it's a complete sentence
+      if (prediction === "OAG") {
+        displayManualWarning(prediction);
+      } else if (prediction === "CAG" && val.trim().length > 20 && val.includes('.')) {
+        displayManualWarning(prediction);
+      } else {
+        manualWarning.style.display = "none";
+      }
+    } catch (error) {
+      console.error("Manual check error:", error);
       manualWarning.style.display = "none";
     }
-  }, 200);
+  }, 500);
 });
 
 function displayManualWarning(prediction) {
@@ -819,7 +867,9 @@ document.addEventListener("mouseout", (e) => {
 });
 
 // --- Initialize ---
-monitorInputs();
+loadSitePermissions().then(() => {
+  monitorInputs();
+});
 const observer = new MutationObserver(() => monitorInputs());
 observer.observe(document.body, { childList: true, subtree: true });
 

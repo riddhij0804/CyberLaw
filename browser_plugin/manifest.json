@@ -5,7 +5,8 @@
   "description": "Monitor and test content for potential cyberlaw violations.",
   "permissions": [
     "scripting",
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "host_permissions": [
     "http://localhost:8000/*"
@@ -25,8 +26,16 @@
     "default_popup": "popup.html"
   },
   "icons": {
-    "128": "icons/icon128.png"
+    "16": "icons/icon16.png",
+    "128": "icons/icon128.png",
+    "48": "icons/logo.png"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/logo.png", "icons/icon16.png"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
   }

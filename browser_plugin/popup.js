@@ -108,9 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
           html += `
             <div style="background: white; border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 4px solid #4caf50;">
               <div style="color: #333; line-height: 1.5; font-style: italic; margin-bottom: 10px;">"${suggestion}"</div>
-              <button onclick="copyToClipboard('${suggestion.replace(/'/g, "\\'")}', ${index})" style="background: #2196f3; border: none; color: white; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 11px;">
-                📋 Copy
-              </button>
+              <button class="copy-suggestion-btn" data-text="${suggestion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}" data-index="${index}" style="background: #2196f3; border: none; color: white; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 11px;">
+  📋 Copy
+</button>
             </div>
           `;
         });
@@ -119,7 +119,37 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       resultDiv.innerHTML = html;
-
+      // Add event listeners for copy buttons - add this right after resultDiv.innerHTML = html;
+const copyButtons = resultDiv.querySelectorAll('.copy-suggestion-btn');
+copyButtons.forEach(btn => {
+  btn.addEventListener('click', async function() {
+    const text = this.dataset.text;
+    const originalText = this.innerHTML;
+    const originalBackground = this.style.background;
+    
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
+    // Update button appearance
+    this.innerHTML = '✅ Copied!';
+    this.style.background = '#4caf50';
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      this.innerHTML = originalText;
+      this.style.background = '#2196f3';
+    }, 2000);
+  });
+});
     } catch (err) {
       console.error(err);
       resultDiv.innerHTML = `
@@ -140,34 +170,3 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-
-// Global function to copy suggestions
-window.copyToClipboard = function(text, index) {
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = event.target;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '✅ Copied!';
-    btn.style.background = '#4caf50';
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.style.background = '#2196f3';
-    }, 2000);
-  }).catch(() => {
-    // Fallback for older browsers
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    
-    const btn = event.target;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '✅ Copied!';
-    btn.style.background = '#4caf50';
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.style.background = '#2196f3';
-    }, 2000);
-  });
-};
